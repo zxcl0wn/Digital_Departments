@@ -1,6 +1,6 @@
 services:
   generator:
-    build: ..
+    build: .
     depends_on:
       postgres_db:
         condition: service_healthy

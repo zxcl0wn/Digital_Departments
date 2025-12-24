@@ -27,7 +27,7 @@ def main():
     ''')
 
 
-    for _ in range(20):
+    while True:
         event = GameEvent()
         event_time = datetime.now()
         cursor.execute(
@@ -36,8 +36,7 @@ def main():
         )
         print(f'Игрок {event.player} был добавлен в БД')
         connect.commit()
-        time.sleep(2)
-
+        time.sleep(5)
 
     connect.commit()
     cursor.close()

@@ -1,0 +1,55 @@
+services:
+  generator:
+    build: ..
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
+  postgres_db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  redash:
+    image: redash/redash:latest
+    environment:
+      REDASH_DATABASE_URL: "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:5432/${DATABASE_NAME}"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres_db
+      - redis
+
+  redash-worker:
+     image: redash/redash:latest
+     depends_on:
+       - redash
+     command: worker
+     environment:
+       REDASH_DATABASE_URL: "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:5432/${DATABASE_NAME}"
+       REDASH_REDIS_URL: "redis://redis:6379/0"
+       QUEUES: "queries,scheduled,celery,schemas,periodic,emails,default"
+       WORKERS_COUNT: "2"
+       REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+
+volumes:
+  postgres_db-data:
